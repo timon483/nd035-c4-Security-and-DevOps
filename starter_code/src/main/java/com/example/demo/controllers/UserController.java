@@ -2,6 +2,8 @@ package com.example.demo.controllers;
 
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +34,8 @@ public class UserController {
 	@Autowired
 	private BCryptPasswordEncoder bCryptPasswordEncoder;
 
+	final static Logger log = LoggerFactory.getLogger(UserController.class);
+
 	@GetMapping("/id/{id}")
 	public ResponseEntity<User> findById(@PathVariable Long id) {
 		return ResponseEntity.of(userRepository.findById(id));
@@ -40,7 +44,15 @@ public class UserController {
 	@GetMapping("/{username}")
 	public ResponseEntity<User> findByUserName(@PathVariable String username) {
 		User user = userRepository.findByUsername(username);
-		return user == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(user);
+
+		if (user == null){
+			log.warn("The user with the given username was not found ", username);
+			return ResponseEntity.notFound().build();
+		} else {
+			log.info("The user with the given username was successfully found ", username);
+			return ResponseEntity.ok(user);
+		}
+
 	}
 	
 	@PostMapping("/create")
@@ -53,10 +65,14 @@ public class UserController {
 
 		if (createUserRequest.getPassword().length() < 7 ||
 				!createUserRequest.getPassword().equals(createUserRequest.getConfirmPassword())	) {
+			log.warn("The user was not created ", createUserRequest.getUsername(), createUserRequest.getPassword(), createUserRequest.getConfirmPassword());
 			return ResponseEntity.badRequest().build();
 		}
 		user.setPassword(bCryptPasswordEncoder.encode(createUserRequest.getPassword()));
 		userRepository.save(user);
+
+		log.info("New user was created with the username ", user.getUsername());
+
 		return ResponseEntity.ok(user);
 	}
 	
